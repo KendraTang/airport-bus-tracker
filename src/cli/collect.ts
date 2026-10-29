@@ -2,17 +2,21 @@
 //
 //   npm run collect            daily run, started by cron at 04:40
 //   npm run collect -- --once  single poll, ignores the cutoff (for testing)
+//
+// Afterwards the data is committed and pushed (see collector/publish.ts); --no-publish skips that.
 
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { COLLECT, PATHS, ROUTE } from '../config.ts';
 import { newTracker, updateTracker, type A2Record, type TrackerState } from '../collector/first-trip.ts';
+import { publishData } from '../collector/publish.ts';
 import { TdxClient, type TdxResponse } from '../tdx/client.ts';
 import { BudgetExceededError } from '../tdx/usage.ts';
 import { taipeiIso, taipeiParts } from '../time.ts';
 
 const once = process.argv.includes('--once');
+const publish = !process.argv.includes('--no-publish');
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const { TDX_CLIENT_ID, TDX_CLIENT_SECRET } = process.env;
@@ -120,3 +124,8 @@ const run = {
 };
 appendFileSync(join(outDir, 'runs.jsonl'), JSON.stringify(run) + '\n');
 log(`done: ${JSON.stringify(run)}`);
+
+if (publish) {
+  const result = publishData({ repoDir: '.', dataDir: PATHS.dataDir, source: COLLECT.source, serviceDate, branch: COLLECT.publishBranch });
+  log(`publish: ${JSON.stringify(result)}`);
+}

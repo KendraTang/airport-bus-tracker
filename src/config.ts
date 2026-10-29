@@ -11,6 +11,8 @@ export const COLLECT = {
   earliestTripStart: '04:30',
   cutoff: '07:30',
   intervalMs: 60_000,
+  // Collected data is committed and pushed only when the working copy is on this branch.
+  publishBranch: 'main',
 } as const;
 
 export const BUDGET = {
