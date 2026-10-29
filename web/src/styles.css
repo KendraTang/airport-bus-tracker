@@ -4,6 +4,8 @@
   --muted: #6e6e73;
   --line: #d2d2d7;
   --error: #c0392b;
+  --estimated: #a35200;
+  --weekend: #f2f2f5;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
   line-height: 1.6;
@@ -16,6 +18,8 @@
     --muted: #a1a1a6;
     --line: #3a3a3c;
     --error: #ff6b5e;
+    --estimated: #ffb366;
+    --weekend: #2a2a2d;
   }
 }
 
@@ -70,4 +74,117 @@ h1 {
 
 .status .note {
   font-size: 0.875rem;
+}
+
+h2 {
+  margin: 40px 0 8px;
+  font-size: 1.25rem;
+}
+
+h3 {
+  margin: 24px 0 8px;
+  font-size: 1rem;
+}
+
+details {
+  margin-top: 24px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trips {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.trips th,
+.trips td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  vertical-align: top;
+}
+
+.trips th:first-child,
+.trips td:first-child,
+.trips th:nth-child(2),
+.trips td:nth-child(2) {
+  text-align: left;
+}
+
+.trips th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.trips tr.weekend td,
+.weekend-swatch {
+  background: var(--weekend);
+}
+
+.estimated {
+  color: var(--estimated);
+  font-style: italic;
+}
+
+.estimated small {
+  display: block;
+  font-size: 0.75rem;
+  font-style: normal;
+  color: var(--muted);
+}
+
+.interval {
+  color: var(--estimated);
+}
+
+.missing {
+  color: var(--muted);
+}
+
+.legend {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0 0;
+  font-size: 0.875rem;
+}
+
+.legend div {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.legend dt {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+}
+
+.legend dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Keep the date visible while the table scrolls sideways on narrow screens. */
+.trips th:first-child,
+.trips td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--bg);
+}
+
+.trips tr.weekend td:first-child {
+  background: var(--weekend);
 }

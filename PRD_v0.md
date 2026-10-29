@@ -266,7 +266,7 @@ npm run collect -- --route 1960
 | stop_sequence | 站序 |
 | arrival_time | 實際或推估到站時間 |
 | departure_time | 實際或推估離站時間 |
-| observation_source | 資料來源（即時本機、即時 Actions、歷史） |
+| observation_source | 資料來源（即時本機、即時 Actions、歷史、第三方 App） |
 | confidence | 可信度 |
 | data_quality_flags | 資料品質註記 |
 
@@ -274,10 +274,13 @@ npm run collect -- --route 1960
 
 #### 3.3 資料可信度
 
-- `observed`：有 A2 事件可直接對應。
-- `inferred`：由 A1 的 GPS 位置推算。
-- `missing`：資料不足，無法判定。
+- `observed`：有事件可直接對應。
+- `interval`：沒有事件，但能由同一台車前後的紀錄夾出範圍（上下限任一側可以開放）。
+- `estimated`：在上述範圍內推算的時間。預設依其他天同一站間的典型時間（中位數）推算；以 A1 的 GPS 位置推算也屬於此類，需註明推算方法。
+- `missing`：資料不足，連範圍都無法界定。
 - `not_arrived_by_cutoff`：收集安全上限前未偵測到抵達。
+
+推算值與範圍不得以觀測值的樣式呈現。缺漏的型態（單站、連續多站、班次後段、整天稀疏）見 `docs/APP_DRIVING_LOG.md`。
 
 原始資料必須保留原始時間戳記與事件類型。事件選擇及可信度判定規則必須附上測試。
 
@@ -292,6 +295,7 @@ npm run collect -- --route 1960
 統計規則：
 
 - 未完成重建的班次，不得計入分布。
+- 主要統計值只使用 `observed`。另外並列一組「最壞情況」統計值：缺漏的站點以範圍上限計入，讓缺漏對結果的影響看得出來，而不是被默默剔除。
 - 樣本數必須與每個統計值一同顯示。
 - 有效平日少於 15 天時，必須明顯標示樣本不足。
 
