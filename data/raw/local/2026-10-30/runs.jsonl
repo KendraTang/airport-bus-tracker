@@ -1,1 +1,2 @@
 {"source":"local","serviceDate":"2026-10-30","startedAt":"2026-10-30T01:04:00.467+08:00","endedAt":"2026-10-30T01:04:01.002+08:00","mode":"once","polls":1,"failures":0,"stopReason":"once","target":null,"arrival":null}
+{"source":"local","serviceDate":"2026-10-30","startedAt":"2026-10-30T04:40:03.663+08:00","endedAt":"2026-10-30T05:40:03.893+08:00","mode":"daily","polls":61,"failures":0,"stopReason":"arrived","target":{"plate":"KKB-2179","tripStartTime":"2026-10-30T04:41:07+08:00"},"arrival":{"reason":"arrived","gpsTime":"2026-10-30T05:39:33+08:00","eventType":1}}
