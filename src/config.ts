@@ -6,7 +6,7 @@ export const ROUTE = {
 } as const;
 
 export const COLLECT = {
-  source: 'mac-mini',
+  source: 'local',
   // Trips that left the first stop before this time are ignored when picking the target trip.
   earliestTripStart: '04:30',
   cutoff: '07:30',

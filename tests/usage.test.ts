@@ -24,10 +24,10 @@ test('points per call follow the TDX rates', () => {
 });
 
 test('monthly total adds up every source and ignores other months', () => {
-  recordUsage(dataDir, '2026-10', entry('mac-mini', 'basic', 0));
+  recordUsage(dataDir, '2026-10', entry('local', 'basic', 0));
   recordUsage(dataDir, '2026-10', entry('actions', 'basic', 0));
   recordUsage(dataDir, '2026-10', entry('dev', 'historical', 0));
-  recordUsage(dataDir, '2026-11', entry('mac-mini', 'historical', 0));
+  recordUsage(dataDir, '2026-11', entry('local', 'historical', 0));
   assert.ok(Math.abs(monthPoints(dataDir, '2026-10') - (2 / 1500 + 0.1)) < 1e-12);
 });
 

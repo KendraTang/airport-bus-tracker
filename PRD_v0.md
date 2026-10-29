@@ -93,7 +93,7 @@ TDX_CLIENT_SECRET=
 要求：
 
 - 本機從 `.env` 讀取，`.env` 必須列入 `.gitignore`，並提供空白的 `.env.example`。
-- GitHub Actions 使用 Repository Secrets，且使用**與 Mac mini 不同的 API 金鑰**。
+- GitHub Actions 使用 Repository Secrets，且使用**與本機不同的 API 金鑰**。
 - Token 有效期 24 小時，必須快取重用，不得每次呼叫都重新取得。取得 token 的端點另有每 IP 每分鐘 20 次的限制。
 - 不得在 log 中輸出 Client Secret 或 Access Token。
 
@@ -125,7 +125,7 @@ TDX_CLIENT_SECRET=
 
 | 項目 | 每日次數 | 備註 |
 |---|---|---|
-| Mac mini 即時收集 | 約 140 | A1、A2 各每分鐘 1 次，約 70 分鐘 |
+| 本機即時收集 | 約 140 | A1、A2 各每分鐘 1 次，約 70 分鐘 |
 | GitHub Actions 備援 | 約 50 | A1、A2 各每 5 分鐘 1 次 |
 
 以每日約 190 次計，一週約 1,330 次，不到 1 點基礎服務。**但整月每天收集會超過 3 點**（約 5,700 次），長期收集前需重新規劃，例如停用備援或只收平日。
@@ -189,7 +189,7 @@ TDX_CLIENT_SECRET=
 
 | 日期 | 目標 |
 |---|---|
-| 10/29 | M0 最小版完成；Mac mini 收集器上線 |
+| 10/29 | M0 最小版完成；本機收集器上線 |
 | 10/30 起每日 | 04:40 自動收集即時資料 |
 | 11/1 前 | GitHub Actions 備援收集上線 |
 | 11/4 前 | 首班車分析頁面上線 |
@@ -205,7 +205,7 @@ TDX_CLIENT_SECRET=
 
 **交付成果**：`docs/TDX_API.md`（API 與欄位說明）與 `docs/API_TEST_LOG.md`（每次呼叫的紀錄與原始回應）。
 
-### M1 — 即時資料收集（Mac mini）
+### M1 — 即時資料收集（本機）
 
 **優先級：最高。每錯過一天就少一個樣本，且無法補回。**
 
@@ -215,7 +215,7 @@ npm run collect -- --route 1960
 
 收集規則：
 
-- 由 cron 每日排程啟動（設定見 `ops/cron/collect.crontab`），執行環境為一台不休眠的 Mac mini。cron 不需要使用者登入即可執行。
+- 由 cron 每日排程啟動（設定見 `ops/cron/collect.crontab`），執行環境為一台不休眠的本機電腦。cron 不需要使用者登入即可執行。
 - **04:40 開始**，每分鐘呼叫一次 A1 與 A2。
 - **偵測到首班車抵達第一航廈就停止**。
 - **安全上限 07:30**：到上限仍未偵測到抵達時停止，並將當日標記為「未偵測到抵達」，與一般的資料缺漏區分。
@@ -224,7 +224,7 @@ npm run collect -- --route 1960
 - 每日收集結束後，自動 commit 並 push 當日原始資料，再觸發網站建置。
 - 週末也收集，分析時與平日分開呈現。
 
-已知限制：Mac mini 系統設定為不休眠，但若遇停電或手動睡眠，當天收集會中斷，由 M4 的 GitHub Actions 備援補足。
+已知限制：本機系統設定為不休眠，但若遇停電或手動睡眠，當天收集會中斷，由 M4 的 GitHub Actions 備援補足。
 
 ### M2 — 歷史資料回填（暫緩）
 
@@ -266,7 +266,7 @@ npm run collect -- --route 1960
 | stop_sequence | 站序 |
 | arrival_time | 實際或推估到站時間 |
 | departure_time | 實際或推估離站時間 |
-| observation_source | 資料來源（即時 Mac mini、即時 Actions、歷史） |
+| observation_source | 資料來源（即時本機、即時 Actions、歷史） |
 | confidence | 可信度 |
 | data_quality_flags | 資料品質註記 |
 
@@ -302,7 +302,7 @@ npm run collect -- --route 1960
 ### 5.1 原則
 
 - **repo 內依日期分檔的原始資料是唯一真實來源。**
-- Mac mini 與 GitHub Actions 寫入不同目錄，例如 `data/raw/{source}/{YYYY-MM-DD}/`，兩者不會修改同一個檔案。
+- 本機與 GitHub Actions 寫入不同目錄，例如 `data/raw/{source}/{YYYY-MM-DD}/`，兩者不會修改同一個檔案。
 - **SQLite 是衍生產物，不進 repo**，任何環境都能從原始資料重建。
 - 網站使用的統計 JSON 由建置流程產生。
 
@@ -336,7 +336,7 @@ npm run collect -- --route 1960
 
 GitHub Actions 負責兩件事：
 
-1. **備援即時收集**：Mac mini 停擺時補資料。
+1. **備援即時收集**：本機停擺時補資料。
 2. **建置與部署 GitHub Pages**。
 
 歷史資料回填因額度有限，以手動或 `workflow_dispatch` 觸發，不設每日排程。
@@ -361,11 +361,11 @@ permissions:
 
 - 只有資料變更時才 Commit。
 - 使用固定且可辨識的 Commit Author。
-- Commit Message 包含日期與來源，例如 `data: mac-mini observations for 2026-10-30`。
-- Mac mini 與 Actions 都會 push，push 前一律先 `git pull --rebase`。因兩者寫入不同檔案，不應產生內容衝突。
+- Commit Message 包含日期與來源，例如 `data: local observations for 2026-10-30`。
+- 本機與 Actions 都會 push，push 前一律先 `git pull --rebase`。因兩者寫入不同檔案，不應產生內容衝突。
 - 不將憑證、Token、暫存敏感檔案提交到 Git。
 
-由 `GITHUB_TOKEN` 產生的 Push 不會觸發新的 `push` Workflow。**因此部署必須在同一個 Workflow 中完成，或使用明確的串接機制，例如 Mac mini push 後以 `workflow_dispatch` 觸發部署。**
+由 `GITHUB_TOKEN` 產生的 Push 不會觸發新的 `push` Workflow。**因此部署必須在同一個 Workflow 中完成，或使用明確的串接機制，例如本機 push 後以 `workflow_dispatch` 觸發部署。**
 
 ### 6.4 Repository 公開原則
 
@@ -452,7 +452,7 @@ airport-bus-tracker/
 ├── .github/workflows/
 │   ├── collect-backup.yml
 │   └── deploy.yml
-├── ops/cron/               # Mac mini 排程設定
+├── ops/cron/               # 本機排程設定
 ├── src/
 │   ├── tdx/                # 認證、client、額度記帳
 │   ├── collector/
@@ -514,7 +514,7 @@ airport-bus-tracker/
 ### 10.5 自動化與網站
 
 - 無資料變更時不產生 Commit。
-- Mac mini 與 Actions 同時 push 不衝突。
+- 本機與 Actions 同時 push 不衝突。
 - 不輸出敏感資訊。
 - 部署不依賴 `GITHUB_TOKEN` Push 觸發其他 Workflow。
 - 網站正確載入 JSON、顯示最後更新時間、手機可瀏覽。
@@ -534,7 +534,7 @@ airport-bus-tracker/
 
 ### M1：即時收集
 
-- [x] Mac mini 每日 04:40 由 cron 自動啟動，抵達後自動停止。
+- [x] 本機每日 04:40 由 cron 自動啟動，抵達後自動停止。
 - [x] 原始資料完整保存。
 - [x] 額度記帳與硬上限運作正常。
 - [ ] 收集結束後自動 commit 並 push。
@@ -576,7 +576,7 @@ airport-bus-tracker/
 執行順序：
 
 1. ~~建立專案骨架、`.gitignore`、`.env.example`、額度記帳模組。~~（已完成）
-2. ~~實作 M1 即時收集器並在 Mac mini 上排程。~~（已完成）
+2. ~~實作 M1 即時收集器並在本機上排程。~~（已完成）
 3. 實作班次重建與首班車分析，輸出網站用的 JSON。
 4. 建立首班車分析頁面與 Pages 部署。
 5. 收集結束後自動 commit、push 並觸發部署。

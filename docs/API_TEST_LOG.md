@@ -109,13 +109,13 @@ GET https://tdx.transportdata.tw/api/historical/v2/Historical/Bus/RealTimeNearSt
 | 請求 | HTTP | 回傳大小 | 原始檔案 |
 |---|---|---|---|
 | Token | 200 | | 不保存 |
-| `GET /api/basic/v2/Bus/RealTimeNearStop/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,369 bytes | `data/raw/mac-mini/2026-10-29/a2.jsonl` |
-| `GET /api/basic/v2/Bus/RealTimeByFrequency/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,156 bytes | `data/raw/mac-mini/2026-10-29/a1.jsonl` |
+| `GET /api/basic/v2/Bus/RealTimeNearStop/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,369 bytes | `data/raw/local/2026-10-29/a2.jsonl` |
+| `GET /api/basic/v2/Bus/RealTimeByFrequency/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,156 bytes | `data/raw/local/2026-10-29/a1.jsonl` |
 
 **結果：**
 
 - cron 正常觸發，log 正確寫入，`.env` 正確讀取。
-- 原始回傳完整保存於 `data/raw/mac-mini/2026-10-29/`，執行摘要寫入同目錄的 `runs.jsonl`。
-- 額度帳本 `data/usage/mac-mini/2026-10.jsonl` 正確記錄 3 筆（Token 1 筆、基礎服務 2 筆）。
+- 原始回傳完整保存於 `data/raw/local/2026-10-29/`，執行摘要寫入同目錄的 `runs.jsonl`。
+- 額度帳本 `data/usage/local/2026-10.jsonl` 正確記錄 3 筆（Token 1 筆、基礎服務 2 筆）。
 - 首班車判斷邏輯選中 23:06:27 發車的 KKA-3258。測試時段不是清晨，所以選中的是當時最早發車的往機場班次，符合預期。
 - **新發現：** KKA-3258 在市府轉運站的離站事件 `GPSTime` 為 `23:06:27`，與 `TripStartTime` 完全相同，`TripStartTimeType` 為 0。這顯示 `TripStartTime` 就是車輛實際離開首站的時間。

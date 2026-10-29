@@ -7,7 +7,7 @@ import { readRuns, summarize, type RunRecord } from '../src/export/summary.ts';
 
 function run(overrides: Partial<RunRecord>): RunRecord {
   return {
-    source: 'mac-mini',
+    source: 'local',
     serviceDate: '2026-10-30',
     startedAt: '2026-10-30T04:40:00.000+08:00',
     endedAt: '2026-10-30T06:10:00.000+08:00',
@@ -53,13 +53,13 @@ test('readRuns collects runs from every source and date, skipping days without r
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'runs.jsonl'), runs.map((r) => JSON.stringify(r) + '\n').join(''));
   };
-  write('mac-mini', '2026-10-30', [run({})]);
+  write('local', '2026-10-30', [run({})]);
   write('actions', '2026-10-30', [run({ source: 'actions' }), run({ source: 'actions', mode: 'once' })]);
-  mkdirSync(join(dataDir, 'raw', 'mac-mini', '2026-10-31'), { recursive: true });
+  mkdirSync(join(dataDir, 'raw', 'local', '2026-10-31'), { recursive: true });
 
   const runs = readRuns(dataDir);
   assert.equal(runs.length, 3);
-  assert.deepEqual(new Set(runs.map((r) => r.source)), new Set(['mac-mini', 'actions']));
+  assert.deepEqual(new Set(runs.map((r) => r.source)), new Set(['local', 'actions']));
 });
 
 test('readRuns returns nothing when there is no raw data yet', () => {
