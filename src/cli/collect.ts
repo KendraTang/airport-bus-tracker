@@ -1,6 +1,6 @@
 // Collect real-time A2 and A1 for the first morning trip of the route, until it reaches the destination stop.
 //
-//   npm run collect            daily run, started by launchd at 04:40
+//   npm run collect            daily run, started by cron at 04:40
 //   npm run collect -- --once  single poll, ignores the cutoff (for testing)
 
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';

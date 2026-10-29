@@ -6,3 +6,5 @@ node_modules/
 *.sqlite-journal
 .DS_Store
 logs/
+web/dist/
+web/public/data/
