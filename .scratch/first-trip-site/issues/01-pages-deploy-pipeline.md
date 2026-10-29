@@ -4,12 +4,12 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 依 PRD 的技術選擇建立網頁專案骨架，並能在本機建置
-- [ ] 匯出步驟讀取所有來源的原始資料，產生頁面所需的 JSON，有對應的測試
-- [ ] GitHub Actions workflow 在 push 到 `main` 時建置並部署到 GitHub Pages
-- [ ] 在 repo 設定中啟用 Pages（來源為 GitHub Actions）；這是對外動作，執行前先向使用者確認
-- [ ] 網站子路徑設定正確，部署後的網址可以正常開啟，資源都能載入
-- [ ] 頁面顯示的收集天數與最後更新時間和 repo 中的原始資料一致
-- [ ] repo、commit 訊息與網站內容不含任何個人資訊
+- [x] 依 PRD 的技術選擇建立網頁專案骨架，並能在本機建置
+- [x] 匯出步驟讀取所有來源的原始資料，產生頁面所需的 JSON，有對應的測試
+- [x] GitHub Actions workflow 在 push 到 `main` 時建置並部署到 GitHub Pages
+- [x] 在 repo 設定中啟用 Pages（來源為 GitHub Actions）；這是對外動作，執行前先向使用者確認
+- [x] 網站子路徑設定正確，部署後的網址可以正常開啟，資源都能載入
+- [x] 頁面顯示的收集天數與最後更新時間和 repo 中的原始資料一致
+- [x] repo、commit 訊息與網站內容不含任何個人資訊
