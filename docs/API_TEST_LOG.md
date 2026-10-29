@@ -10,7 +10,7 @@
 
 | 月份 | 基礎服務次數 | 歷史服務次數 | 歷史服務資料量 | 備註 |
 |---|---|---|---|---|
-| 2026-10 | 6 | 1 | 1.96MB（壓縮後 163KB） | 另取 Token 3 次，不計入資料 API |
+| 2026-10 | 8 | 1 | 1.96MB（壓縮後 163KB） | 另取 Token 4 次，不計入資料 API |
 
 TDX 會員中心於每日凌晨結算前一日用量，實際扣點以會員中心為準。
 
@@ -119,3 +119,28 @@ GET https://tdx.transportdata.tw/api/historical/v2/Historical/Bus/RealTimeNearSt
 - 額度帳本 `data/usage/local/2026-10.jsonl` 正確記錄 3 筆（Token 1 筆、基礎服務 2 筆）。
 - 首班車判斷邏輯選中 23:06:27 發車的 KKA-3258。測試時段不是清晨，所以選中的是當時最早發車的往機場班次，符合預期。
 - **新發現：** KKA-3258 在市府轉運站的離站事件 `GPSTime` 為 `23:06:27`，與 `TripStartTime` 完全相同，`TripStartTimeType` 為 0。這顯示 `TripStartTime` 就是車輛實際離開首站的時間。
+
+## 2026-10-30
+
+### 測試 4：以 cron 執行收集器並自動發佈
+
+**時間：** 2026-10-30 01:04:00（台灣時間）  
+**目的：** 驗證收集結束後的自動發佈能在 cron 環境中運作：只 commit 收集器自己的資料目錄、以 SSH push 到 GitHub、push 後觸發網站部署。  
+**花費：** 基礎服務 2 次，取 Token 1 次。
+
+**作法：** 暫時加入一行 cron，在 01:04 執行 `node src/cli/collect.ts --once`，輸出寫入 `logs/collect.log`。執行完畢後已移除這行臨時排程，只保留每日 04:40 的正式排程。
+
+| 請求 | HTTP | 回傳大小 | 原始檔案 |
+|---|---|---|---|
+| Token | 200 | | 不保存 |
+| `GET /api/basic/v2/Bus/RealTimeNearStop/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,322 bytes | `data/raw/local/2026-10-30/a2.jsonl` |
+| `GET /api/basic/v2/Bus/RealTimeByFrequency/InterCity?$filter=RouteName/Zh_tw eq '1960'&$format=JSON` | 200 | 1,153 bytes | `data/raw/local/2026-10-30/a1.jsonl` |
+
+**結果：**
+
+- 收集器在 cron 環境中以 SSH 成功 push，不需要登入或 ssh-agent。log 記錄 `publish: {"status":"pushed","committed":true}`。
+- 產生的 commit 作者為 `airport-bus-tracker collector`，訊息為 `data: local observations for 2026-10-30`，只包含 `data/raw/local/` 與 `data/usage/local/` 底下的檔案。
+- push 觸發網站部署並成功完成，線上的 `summary.json` 更新為 2 次測試執行、最後更新 01:04。
+- 首班車判斷結果為 `target=none`：此時沒有當天 04:30 之後發車的往機場班次，符合預期。
+- **新發現：** A2 回傳了 KKA-1695 在 2026-10-29 23:46:21 的進站事件，比查詢時間早了 1 小時 18 分。車輛收班後，最後一筆事件仍會留在即時 A2 中一段時間。重建班次時必須以 `GPSTime` 與 `TripStartTime` 判斷事件屬於哪個班次，不能以查詢時間為準。
+
