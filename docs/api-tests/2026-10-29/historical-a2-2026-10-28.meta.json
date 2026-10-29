@@ -1,0 +1,27 @@
+{
+  "requestedAt": "2026-10-29T14:30:59.139Z",
+  "url": "https://tdx.transportdata.tw/api/historical/v2/Historical/Bus/RealTimeNearStop/InterCity?Dates=2026-10-28&$format=JSONL&$top=3000&$filter=RouteUID%20eq%20%27THB1960%27",
+  "status": 200,
+  "elapsedMs": 1737,
+  "bodyBytes": 1964680,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "content-disposition": "inline; filename=v2-Historical-Bus-RealTimeNearStop-InterCity-20261028.jsonl",
+    "content-encoding": "gzip",
+    "content-length": "162731",
+    "content-type": "text/ndjson; charset=utf-8",
+    "date": "Thu, 29 Oct 2026 14:31:00 GMT",
+    "ratelimit-limit": "5",
+    "ratelimit-remaining": "4",
+    "ratelimit-reset": "1",
+    "server": "nginx",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "vary": "Accept-Encoding",
+    "via": "kong/2.8.3",
+    "x-frame-options": "SAMEORIGIN",
+    "x-kong-proxy-latency": "292",
+    "x-kong-upstream-latency": "1386",
+    "x-ratelimit-limit-minute": "5",
+    "x-ratelimit-remaining-minute": "4"
+  }
+}
