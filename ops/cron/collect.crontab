@@ -1,0 +1,2 @@
+# airport-bus-tracker: collect 1960 first-trip real-time data every day at 04:40 (Asia/Taipei)
+40 4 * * * cd /Users/tkain/projects/airport-bus-tracker && mkdir -p logs && /Users/tkain/.local/share/mise/installs/node/26/bin/node src/cli/collect.ts >> logs/collect.log 2>&1
