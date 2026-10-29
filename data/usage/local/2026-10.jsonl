@@ -1,3 +1,6 @@
 {"at":"2026-10-29T23:09:01.284+08:00","source":"local","service":"auth","path":"/auth/token","status":200,"bytes":0}
 {"at":"2026-10-29T23:09:01.091+08:00","source":"local","service":"basic","path":"/v2/Bus/RealTimeNearStop/InterCity?$filter=RouteName%2FZh_tw%20eq%20'1960'&$format=JSON","status":200,"bytes":1369}
 {"at":"2026-10-29T23:09:01.322+08:00","source":"local","service":"basic","path":"/v2/Bus/RealTimeByFrequency/InterCity?$filter=RouteName%2FZh_tw%20eq%20'1960'&$format=JSON","status":200,"bytes":1156}
+{"at":"2026-10-30T01:04:00.789+08:00","source":"local","service":"auth","path":"/auth/token","status":200,"bytes":0}
+{"at":"2026-10-30T01:04:00.467+08:00","source":"local","service":"basic","path":"/v2/Bus/RealTimeNearStop/InterCity?$filter=RouteName%2FZh_tw%20eq%20'1960'&$format=JSON","status":200,"bytes":1322}
+{"at":"2026-10-30T01:04:00.971+08:00","source":"local","service":"basic","path":"/v2/Bus/RealTimeByFrequency/InterCity?$filter=RouteName%2FZh_tw%20eq%20'1960'&$format=JSON","status":200,"bytes":1153}
