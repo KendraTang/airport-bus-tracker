@@ -32,6 +32,21 @@ export const COLLECT = {
   publishBranch: 'main',
 } as const;
 
+// Some days also record every trip in both directions until service ends (see collector/full-day.ts).
+export const FULL_DAY = {
+  epoch: '2026-11-01',
+  everyDays: 6,
+  // Departure events at city stops stayed visible for 3 minutes or more on 2026-10-30.
+  intervalMs: 3 * 60_000,
+  endBy: '02:00',
+  quietAfter: '22:00',
+  quietMs: 60 * 60_000,
+  // About 0.3 points of A2 calls.
+  maxPolls: 450,
+  estimatedPoints: 0.32,
+  firstTripDailyPoints: 0.06,
+} as const;
+
 export const BUDGET = {
   monthlyPoints: 3,
   reservePoints: 0.2,

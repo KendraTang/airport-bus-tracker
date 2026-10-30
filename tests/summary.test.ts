@@ -20,12 +20,25 @@ function run(overrides: Partial<RunRecord>): RunRecord {
 }
 
 test('no runs yields an empty summary', () => {
-  assert.deepEqual(summarize([]), { collectedDates: [], testRuns: 0, lastUpdatedAt: null });
+  assert.deepEqual(summarize([]), { collectedDates: [], fullDayDates: [], testRuns: 0, lastUpdatedAt: null });
+});
+
+test('full-day runs are listed apart from first-trip days and test runs', () => {
+  const summary = summarize([
+    run({ serviceDate: '2026-11-01' }),
+    run({ serviceDate: '2026-11-01', mode: 'full-day', endedAt: '2026-11-02T01:20:00.000+08:00' }),
+  ]);
+  assert.deepEqual(summary, {
+    collectedDates: ['2026-11-01'],
+    fullDayDates: ['2026-11-01'],
+    testRuns: 0,
+    lastUpdatedAt: '2026-11-02T01:20:00.000+08:00',
+  });
 });
 
 test('test runs update the last-updated time but are not collected days', () => {
   const summary = summarize([run({ serviceDate: '2026-10-29', mode: 'once', endedAt: '2026-10-29T23:09:01.357+08:00' })]);
-  assert.deepEqual(summary, { collectedDates: [], testRuns: 1, lastUpdatedAt: '2026-10-29T23:09:01.357+08:00' });
+  assert.deepEqual(summary, { collectedDates: [], fullDayDates: [], testRuns: 1, lastUpdatedAt: '2026-10-29T23:09:01.357+08:00' });
 });
 
 test('a day collected by two sources counts once, newest date first', () => {

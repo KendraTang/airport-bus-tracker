@@ -10,7 +10,7 @@ export interface RunRecord {
   serviceDate: string;
   startedAt: string;
   endedAt: string;
-  mode: 'daily' | 'once';
+  mode: 'daily' | 'full-day' | 'once';
   polls: number;
   failures: number;
   stopReason: string;
@@ -18,14 +18,16 @@ export interface RunRecord {
 
 export function summarize(runs: RunRecord[]): Summary {
   const dates = new Set<string>();
+  const fullDayDates = new Set<string>();
   let testRuns = 0;
   let lastUpdatedAt: string | null = null;
   for (const run of runs) {
     if (run.mode === 'daily') dates.add(run.serviceDate);
+    else if (run.mode === 'full-day') fullDayDates.add(run.serviceDate);
     else testRuns++;
     if (lastUpdatedAt === null || Date.parse(run.endedAt) > Date.parse(lastUpdatedAt)) lastUpdatedAt = run.endedAt;
   }
-  return { collectedDates: [...dates].sort().reverse(), testRuns, lastUpdatedAt };
+  return { collectedDates: [...dates].sort().reverse(), fullDayDates: [...fullDayDates].sort().reverse(), testRuns, lastUpdatedAt };
 }
 
 export function readRuns(dataDir: string): RunRecord[] {

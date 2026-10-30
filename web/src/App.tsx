@@ -57,6 +57,13 @@ function Status({ summary }: { summary: Summary }) {
         </dd>
       </div>
       <div>
+        <dt>全天來回紀錄</dt>
+        <dd>
+          {summary.fullDayDates.length} 天
+          <span className="note">（每 6 天一次，記錄全天所有班次）</span>
+        </dd>
+      </div>
+      <div>
         <dt>最後更新</dt>
         <dd>{summary.lastUpdatedAt ? taipeiTime.format(new Date(summary.lastUpdatedAt)) : '尚無資料'}</dd>
       </div>

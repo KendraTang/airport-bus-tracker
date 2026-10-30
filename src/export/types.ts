@@ -3,6 +3,8 @@
 export interface Summary {
   // Service dates with at least one daily (non-test) run, newest first.
   collectedDates: string[];
+  // Service dates with a full-day run (every trip in both directions), newest first.
+  fullDayDates: string[];
   // Number of test runs (--once), which are not counted as collected days.
   testRuns: number;
   // Latest endedAt across all runs, or null when nothing has run yet.

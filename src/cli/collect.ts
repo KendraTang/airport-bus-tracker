@@ -1,5 +1,6 @@
 // Collect real-time A2 and A1 for the first morning trip of the route, until it reaches the destination stop.
 // Polling pauses while the vehicle is far from the next stops (see nextPollDelay in collector/first-trip.ts).
+// On full-day dates (see collector/full-day.ts) it then keeps polling A2 for every trip until service ends.
 //
 //   npm run collect            daily run, started by cron at 04:40
 //   npm run collect -- --once  single poll, ignores the cutoff (for testing)
@@ -9,7 +10,7 @@
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { COLLECT, PATHS, ROUTE } from '../config.ts';
+import { BUDGET, COLLECT, FULL_DAY, PATHS, ROUTE } from '../config.ts';
 import {
   newTracker,
   nextPollDelay,
@@ -19,9 +20,10 @@ import {
   type TrackerOptions,
   type TrackerState,
 } from '../collector/first-trip.ts';
+import { dayStopReason, fullDayAffordable, isFullDayDate, newDayLog, recordDayPoll } from '../collector/full-day.ts';
 import { publishData } from '../collector/publish.ts';
 import { TdxClient, type TdxResponse } from '../tdx/client.ts';
-import { BudgetExceededError } from '../tdx/usage.ts';
+import { BudgetExceededError, monthPoints } from '../tdx/usage.ts';
 import { taipeiIso, taipeiParts } from '../time.ts';
 
 const once = process.argv.includes('--once');
@@ -89,6 +91,13 @@ function parseRecords<T>(res: TdxResponse): T[] | null {
   }
 }
 
+// Decided up front, because on full-day dates the first-trip pauses are capped to keep every trip covered.
+const fullDay =
+  !once &&
+  isFullDayDate(serviceDate, FULL_DAY) &&
+  fullDayAffordable(serviceDate, monthPoints(PATHS.dataDir, taipeiParts(startedAt).month), BUDGET.monthlyPoints - BUDGET.reservePoints, FULL_DAY);
+if (!once && isFullDayDate(serviceDate, FULL_DAY)) log(fullDay ? 'full-day date: will continue after the first trip' : 'full-day date skipped: not enough budget left');
+
 let state: TrackerState = newTracker(serviceDate);
 let polls = 0;
 let failures = 0;
@@ -133,7 +142,8 @@ while (true) {
     stopReason = 'once';
     break;
   }
-  const delay = nextPollDelay(state, trackerOptions, new Date(pollStart), COLLECT.intervalMs);
+  let delay = nextPollDelay(state, trackerOptions, new Date(pollStart), COLLECT.intervalMs);
+  if (fullDay) delay = Math.min(delay, FULL_DAY.intervalMs);
   if (delay > COLLECT.intervalMs) log(`pausing ${delay / 60_000} min: the target cannot reach the next stop sooner`);
   await sleep(Math.max(0, delay - (Date.now() - pollStart)));
 }
@@ -153,7 +163,63 @@ const run = {
 appendFileSync(join(outDir, 'runs.jsonl'), JSON.stringify(run) + '\n');
 log(`done: ${JSON.stringify(run)}`);
 
-if (publish) {
+function publishNow(): void {
+  if (!publish) return;
   const result = publishData({ repoDir: '.', dataDir: PATHS.dataDir, source: COLLECT.source, serviceDate, branch: COLLECT.publishBranch });
   log(`publish: ${JSON.stringify(result)}`);
+}
+
+publishNow();
+
+if (fullDay && stopReason !== 'budget') {
+  const dayStartedAt = new Date();
+  const day = newDayLog(serviceDate, dayStartedAt);
+  let dayFailures = 0;
+  let dayStopReasonText = '';
+  while (true) {
+    const pollStart = Date.now();
+    const reason = dayStopReason(day, new Date(), FULL_DAY);
+    if (reason) {
+      dayStopReasonText = reason;
+      break;
+    }
+    try {
+      const a2 = await client.get('basic', endpoints.a2);
+      save('a2', a2);
+      const records = parseRecords<A2Record>(a2);
+      if (records) {
+        const added = recordDayPoll(day, records, new Date());
+        log(`full-day poll ${day.polls}: a2 HTTP ${a2.status} (${a2.bytes}B), ${added} new events, ${day.seen.size} in total`);
+      } else {
+        day.polls++;
+        dayFailures++;
+        log(`full-day poll ${day.polls}: a2 HTTP ${a2.status}`);
+      }
+    } catch (err) {
+      if (err instanceof BudgetExceededError) {
+        dayStopReasonText = 'budget';
+        log(err.message);
+        break;
+      }
+      day.polls++;
+      dayFailures++;
+      log(`full-day poll ${day.polls} failed: ${(err as Error).message}`);
+    }
+    await sleep(Math.max(0, FULL_DAY.intervalMs - (Date.now() - pollStart)));
+  }
+
+  const dayRun = {
+    source: COLLECT.source,
+    serviceDate,
+    startedAt: taipeiIso(dayStartedAt),
+    endedAt: taipeiIso(new Date()),
+    mode: 'full-day',
+    polls: day.polls,
+    failures: dayFailures,
+    stopReason: dayStopReasonText,
+    events: day.seen.size,
+  };
+  appendFileSync(join(outDir, 'runs.jsonl'), JSON.stringify(dayRun) + '\n');
+  log(`full-day done: ${JSON.stringify(dayRun)}`);
+  publishNow();
 }
