@@ -34,16 +34,18 @@ export const COLLECT = {
 
 // Some days also record every trip in both directions until service ends (see collector/full-day.ts).
 export const FULL_DAY = {
-  epoch: '2026-11-01',
+  epoch: '2026-10-31',
   everyDays: 6,
-  // Departure events at city stops stayed visible for 3 minutes or more on 2026-10-30.
-  intervalMs: 3 * 60_000,
-  endBy: '02:00',
+  tiers: [
+    // A2 and A1 every minute: about 2,600 to 3,200 calls.
+    { name: 'dense', intervalMs: 60_000, withA1: true, maxPolls: 1400, estimatedPoints: 2.3 },
+    // A2 only; departure events at city stops stayed visible for 3 minutes or more on 2026-10-30.
+    { name: 'sparse', intervalMs: 3 * 60_000, withA1: false, maxPolls: 500, estimatedPoints: 0.35 },
+  ],
+  // Just before the next day's cron run at 04:40.
+  endBy: '04:30',
   quietAfter: '22:00',
   quietMs: 60 * 60_000,
-  // About 0.3 points of A2 calls.
-  maxPolls: 450,
-  estimatedPoints: 0.32,
   firstTripDailyPoints: 0.06,
 } as const;
 

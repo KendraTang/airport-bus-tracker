@@ -7,7 +7,7 @@
 //
 // Afterwards the data is committed and pushed (see collector/publish.ts); --no-publish skips that.
 
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { BUDGET, COLLECT, FULL_DAY, PATHS, ROUTE } from '../config.ts';
@@ -20,7 +20,7 @@ import {
   type TrackerOptions,
   type TrackerState,
 } from '../collector/first-trip.ts';
-import { dayStopReason, fullDayAffordable, isFullDayDate, newDayLog, recordDayPoll } from '../collector/full-day.ts';
+import { chooseFullDayTier, dayStopReason, isFullDayDate, newDayLog, recordDayPoll } from '../collector/full-day.ts';
 import { publishData } from '../collector/publish.ts';
 import { TdxClient, type TdxResponse } from '../tdx/client.ts';
 import { BudgetExceededError, monthPoints } from '../tdx/usage.ts';
@@ -28,6 +28,32 @@ import { taipeiIso, taipeiParts } from '../time.ts';
 
 const once = process.argv.includes('--once');
 const publish = !process.argv.includes('--no-publish');
+
+// A full-day run lasts until the next morning, and may be started by hand before the cron run, so only one collector
+// may run at a time. A lock left by a process that no longer exists is taken over.
+const LOCK_FILE = join('logs', 'collect.lock');
+function acquireLock(): boolean {
+  mkdirSync('logs', { recursive: true });
+  try {
+    writeFileSync(LOCK_FILE, String(process.pid), { flag: 'wx' });
+    return true;
+  } catch {
+    try {
+      process.kill(Number(readFileSync(LOCK_FILE, 'utf8')), 0);
+      return false;
+    } catch {
+      writeFileSync(LOCK_FILE, String(process.pid));
+      return true;
+    }
+  }
+}
+if (!acquireLock()) {
+  console.log(`another collector holds ${LOCK_FILE}; exiting`);
+  process.exit(0);
+}
+process.on('exit', () => {
+  if (existsSync(LOCK_FILE) && readFileSync(LOCK_FILE, 'utf8') === String(process.pid)) rmSync(LOCK_FILE);
+});
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const { TDX_CLIENT_ID, TDX_CLIENT_SECRET } = process.env;
@@ -93,10 +119,12 @@ function parseRecords<T>(res: TdxResponse): T[] | null {
 
 // Decided up front, because on full-day dates the first-trip pauses are capped to keep every trip covered.
 const fullDay =
-  !once &&
-  isFullDayDate(serviceDate, FULL_DAY) &&
-  fullDayAffordable(serviceDate, monthPoints(PATHS.dataDir, taipeiParts(startedAt).month), BUDGET.monthlyPoints - BUDGET.reservePoints, FULL_DAY);
-if (!once && isFullDayDate(serviceDate, FULL_DAY)) log(fullDay ? 'full-day date: will continue after the first trip' : 'full-day date skipped: not enough budget left');
+  !once && isFullDayDate(serviceDate, FULL_DAY)
+    ? chooseFullDayTier(serviceDate, monthPoints(PATHS.dataDir, taipeiParts(startedAt).month), BUDGET.monthlyPoints - BUDGET.reservePoints, FULL_DAY)
+    : null;
+if (!once && isFullDayDate(serviceDate, FULL_DAY)) {
+  log(fullDay ? `full-day date: will continue after the first trip (${fullDay.name})` : 'full-day date skipped: not enough budget left');
+}
 
 let state: TrackerState = newTracker(serviceDate);
 let polls = 0;
@@ -143,7 +171,7 @@ while (true) {
     break;
   }
   let delay = nextPollDelay(state, trackerOptions, new Date(pollStart), COLLECT.intervalMs);
-  if (fullDay) delay = Math.min(delay, FULL_DAY.intervalMs);
+  if (fullDay) delay = Math.min(delay, fullDay.intervalMs);
   if (delay > COLLECT.intervalMs) log(`pausing ${delay / 60_000} min: the target cannot reach the next stop sooner`);
   await sleep(Math.max(0, delay - (Date.now() - pollStart)));
 }
@@ -178,7 +206,7 @@ if (fullDay && stopReason !== 'budget') {
   let dayStopReasonText = '';
   while (true) {
     const pollStart = Date.now();
-    const reason = dayStopReason(day, new Date(), FULL_DAY);
+    const reason = dayStopReason(day, new Date(), FULL_DAY, fullDay);
     if (reason) {
       dayStopReasonText = reason;
       break;
@@ -186,10 +214,12 @@ if (fullDay && stopReason !== 'budget') {
     try {
       const a2 = await client.get('basic', endpoints.a2);
       save('a2', a2);
+      const a1 = fullDay.withA1 ? await client.get('basic', endpoints.a1) : null;
+      if (a1) save('a1', a1);
       const records = parseRecords<A2Record>(a2);
       if (records) {
         const added = recordDayPoll(day, records, new Date());
-        log(`full-day poll ${day.polls}: a2 HTTP ${a2.status} (${a2.bytes}B), ${added} new events, ${day.seen.size} in total`);
+        log(`full-day poll ${day.polls}: a2 HTTP ${a2.status} (${a2.bytes}B)${a1 ? `, a1 HTTP ${a1.status} (${a1.bytes}B)` : ''}, ${added} new events, ${day.seen.size} in total`);
       } else {
         day.polls++;
         dayFailures++;
@@ -205,7 +235,7 @@ if (fullDay && stopReason !== 'budget') {
       dayFailures++;
       log(`full-day poll ${day.polls} failed: ${(err as Error).message}`);
     }
-    await sleep(Math.max(0, FULL_DAY.intervalMs - (Date.now() - pollStart)));
+    await sleep(Math.max(0, fullDay.intervalMs - (Date.now() - pollStart)));
   }
 
   const dayRun = {
@@ -214,6 +244,7 @@ if (fullDay && stopReason !== 'budget') {
     startedAt: taipeiIso(dayStartedAt),
     endedAt: taipeiIso(new Date()),
     mode: 'full-day',
+    tier: fullDay.name,
     polls: day.polls,
     failures: dayFailures,
     stopReason: dayStopReasonText,
