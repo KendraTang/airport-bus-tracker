@@ -20,11 +20,13 @@ export type FullDayOptions = {
   everyDays: number;
   // Densest first.
   tiers: readonly FullDayTier[];
-  // Stop the next morning at this time at the latest.
-  endBy: string;
-  // After this time, stop once no new A2 event has appeared for quietMs.
-  quietAfter: string;
+  // The last trip on the timetable, which departs after midnight. The run ends when it reaches its terminal stop.
+  lastTrip: { direction: number; departsNextDay: string; terminalStopUID: string };
+  // If that event never shows up: once lastTripMaxMs has passed since its scheduled departure, stop after quietMs
+  // without new events, and stop the next morning at endBy in any case.
+  lastTripMaxMs: number;
   quietMs: number;
+  endBy: string;
   // Reserved for the first-trip run on each remaining day of the month.
   firstTripDailyPoints: number;
 };
@@ -45,17 +47,44 @@ export function chooseFullDayTier(date: string, usedPoints: number, capPoints: n
   return opts.tiers.find((tier) => usedPoints + tier.estimatedPoints + reserved <= capPoints) ?? null;
 }
 
-export type DayLog = { serviceDate: string; seen: Set<string>; lastNewEventAt: number; polls: number };
+export type DayLog = {
+  serviceDate: string;
+  seen: Set<string>;
+  lastNewEventAt: number;
+  polls: number;
+  // GPSTime of the last trip's arrival at its terminal stop.
+  lastTripEndedAt: string | null;
+};
 
 export function newDayLog(serviceDate: string, startedAt: Date): DayLog {
-  return { serviceDate, seen: new Set(), lastNewEventAt: startedAt.getTime(), polls: 0 };
+  return { serviceDate, seen: new Set(), lastNewEventAt: startedAt.getTime(), polls: 0, lastTripEndedAt: null };
 }
 
+function nextDate(date: string): string {
+  return new Date(midnight(date) + DAY_MS + 12 * 3600_000).toISOString().slice(0, 10);
+}
+
+function lastTripDeparture(log: DayLog, opts: FullDayOptions): number {
+  return Date.parse(`${nextDate(log.serviceDate)}T${opts.lastTrip.departsNextDay}:00+08:00`);
+}
+
+// A trip whose start is this close to the scheduled time is taken to be that trip.
+const SCHEDULE_TOLERANCE_MS = 30 * 60_000;
+
 // Returns how many events this poll added. Records persist after a vehicle stops, so only new keys count.
-export function recordDayPoll(log: DayLog, records: A2Record[], at: Date): number {
+export function recordDayPoll(log: DayLog, records: A2Record[], at: Date, opts: FullDayOptions): number {
   log.polls++;
   let added = 0;
   for (const r of records) {
+    if (
+      !log.lastTripEndedAt &&
+      r.Direction === opts.lastTrip.direction &&
+      r.StopUID === opts.lastTrip.terminalStopUID &&
+      r.TripStartTime &&
+      Math.abs(Date.parse(r.TripStartTime) - lastTripDeparture(log, opts)) <= SCHEDULE_TOLERANCE_MS
+    ) {
+      log.lastTripEndedAt = r.GPSTime;
+    }
     const key = `${r.PlateNumb}/${r.Direction}/${r.StopSequence}/${r.A2EventType ?? ''}/${r.GPSTime}`;
     if (log.seen.has(key)) continue;
     log.seen.add(key);
@@ -65,14 +94,13 @@ export function recordDayPoll(log: DayLog, records: A2Record[], at: Date): numbe
   return added;
 }
 
-export type DayStopReason = 'end-of-window' | 'service-ended' | 'poll-cap';
+export type DayStopReason = 'last-trip-ended' | 'service-ended' | 'end-of-window' | 'poll-cap';
 
 export function dayStopReason(log: DayLog, now: Date, opts: FullDayOptions, tier: FullDayTier): DayStopReason | null {
   const t = now.getTime();
-  const nextDay = new Date(midnight(log.serviceDate) + DAY_MS + 12 * 3600_000).toISOString().slice(0, 10);
-  if (t >= Date.parse(`${nextDay}T${opts.endBy}:00+08:00`)) return 'end-of-window';
+  if (log.lastTripEndedAt) return 'last-trip-ended';
+  if (t >= Date.parse(`${nextDate(log.serviceDate)}T${opts.endBy}:00+08:00`)) return 'end-of-window';
   if (log.polls >= tier.maxPolls) return 'poll-cap';
-  const quietFrom = Date.parse(`${log.serviceDate}T${opts.quietAfter}:00+08:00`);
-  if (t >= quietFrom && t - log.lastNewEventAt >= opts.quietMs) return 'service-ended';
+  if (t >= lastTripDeparture(log, opts) + opts.lastTripMaxMs && t - log.lastNewEventAt >= opts.quietMs) return 'service-ended';
   return null;
 }

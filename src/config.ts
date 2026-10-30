@@ -42,10 +42,12 @@ export const FULL_DAY = {
     // A2 only; departure events at city stops stayed visible for 3 minutes or more on 2026-10-30.
     { name: 'sparse', intervalMs: 3 * 60_000, withA1: false, maxPolls: 500, estimatedPoints: 0.35 },
   ],
+  // From docs/TIMETABLE.md: the last trip leaves the airport at 00:15 and ends at 市府轉運站.
+  lastTrip: { direction: 1, departsNextDay: '00:15', terminalStopUID: 'THB289789' },
+  lastTripMaxMs: 2 * 3600_000,
+  quietMs: 30 * 60_000,
   // Just before the next day's cron run at 04:40.
   endBy: '04:30',
-  quietAfter: '22:00',
-  quietMs: 60 * 60_000,
   firstTripDailyPoints: 0.06,
 } as const;
 

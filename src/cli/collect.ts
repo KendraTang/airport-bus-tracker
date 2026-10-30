@@ -218,7 +218,7 @@ if (fullDay && stopReason !== 'budget') {
       if (a1) save('a1', a1);
       const records = parseRecords<A2Record>(a2);
       if (records) {
-        const added = recordDayPoll(day, records, new Date());
+        const added = recordDayPoll(day, records, new Date(), FULL_DAY);
         log(`full-day poll ${day.polls}: a2 HTTP ${a2.status} (${a2.bytes}B)${a1 ? `, a1 HTTP ${a1.status} (${a1.bytes}B)` : ''}, ${added} new events, ${day.seen.size} in total`);
       } else {
         day.polls++;
