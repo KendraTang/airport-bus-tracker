@@ -1,4 +1,5 @@
 // Collect real-time A2 and A1 for the first morning trip of the route, until it reaches the destination stop.
+// Polling pauses while the vehicle is far from the next stops (see nextPollDelay in collector/first-trip.ts).
 //
 //   npm run collect            daily run, started by cron at 04:40
 //   npm run collect -- --once  single poll, ignores the cutoff (for testing)
@@ -9,7 +10,15 @@ import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { COLLECT, PATHS, ROUTE } from '../config.ts';
-import { newTracker, updateTracker, type A2Record, type TrackerState } from '../collector/first-trip.ts';
+import {
+  newTracker,
+  nextPollDelay,
+  updateTracker,
+  type A1Record,
+  type A2Record,
+  type TrackerOptions,
+  type TrackerState,
+} from '../collector/first-trip.ts';
 import { publishData } from '../collector/publish.ts';
 import { TdxClient, type TdxResponse } from '../tdx/client.ts';
 import { BudgetExceededError } from '../tdx/usage.ts';
@@ -59,6 +68,27 @@ function save(name: string, res: TdxResponse): void {
   appendFileSync(join(outDir, `${name}.jsonl`), JSON.stringify(line) + '\n');
 }
 
+const trackerOptions: TrackerOptions = {
+  direction: ROUTE.direction,
+  destinationStopUID: ROUTE.destinationStopUID,
+  earliestTripStart: COLLECT.earliestTripStart,
+  stops: ROUTE.stops,
+  maxSpeedKmh: COLLECT.maxSpeedKmh,
+  stallMs: COLLECT.stallMs,
+  progressMeters: COLLECT.progressMeters,
+  nearDestinationMeters: COLLECT.nearDestinationMeters,
+  nearDestinationGraceMs: COLLECT.nearDestinationGraceMs,
+};
+
+function parseRecords<T>(res: TdxResponse): T[] | null {
+  if (res.status !== 200) return null;
+  try {
+    return JSON.parse(res.text) as T[];
+  } catch {
+    return null;
+  }
+}
+
 let state: TrackerState = newTracker(serviceDate);
 let polls = 0;
 let failures = 0;
@@ -78,17 +108,13 @@ while (true) {
     const a1 = await client.get('basic', endpoints.a1);
     save('a1', a1);
 
-    if (a2.status === 200) {
-      const records = JSON.parse(a2.text) as A2Record[];
-      state = updateTracker(state, records, {
-        direction: ROUTE.direction,
-        destinationStopUID: ROUTE.destinationStopUID,
-        earliestTripStart: COLLECT.earliestTripStart,
-      });
+    const a2Records = parseRecords<A2Record>(a2);
+    if (a2Records) {
+      state = updateTracker(state, { at: a2.fetchedAt, a2: a2Records, a1: parseRecords<A1Record>(a1) }, trackerOptions);
     } else {
       failures++;
     }
-    log(`poll ${polls}: a2 HTTP ${a2.status} (${a2.bytes}B), a1 HTTP ${a1.status} (${a1.bytes}B), target=${state.target ? `${state.target.plate}@${state.target.tripStartTime}` : 'none'}`);
+    log(`poll ${polls}: a2 HTTP ${a2.status} (${a2.bytes}B), a1 HTTP ${a1.status} (${a1.bytes}B), target=${state.target ? `${state.target.plate}@${state.target.tripStartTime}` : 'none'}, seen stop ${state.seenSeq}`);
   } catch (err) {
     if (err instanceof BudgetExceededError) {
       stopReason = 'budget';
@@ -107,7 +133,9 @@ while (true) {
     stopReason = 'once';
     break;
   }
-  await sleep(Math.max(0, COLLECT.intervalMs - (Date.now() - pollStart)));
+  const delay = nextPollDelay(state, trackerOptions, new Date(pollStart), COLLECT.intervalMs);
+  if (delay > COLLECT.intervalMs) log(`pausing ${delay / 60_000} min: the target cannot reach the next stop sooner`);
+  await sleep(Math.max(0, delay - (Date.now() - pollStart)));
 }
 
 const run = {

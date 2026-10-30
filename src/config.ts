@@ -3,6 +3,15 @@ export const ROUTE = {
   routeUID: 'THB1960',
   direction: 0,
   destinationStopUID: 'THB295119', // 桃園機場第一航廈
+  // Direction 0 stops with positions, from StopOfRoute (docs/api-tests/2026-10-29/stopOfRoute.json).
+  stops: [
+    { seq: 1, stopUID: 'THB289789', lat: 25.040448, lon: 121.564772 }, // 市府轉運站
+    { seq: 2, stopUID: 'THB256678', lat: 25.03531, lon: 121.56335 }, // 台北君悅酒店
+    { seq: 3, stopUID: 'THB258650', lat: 25.0266546, lon: 121.5489483 }, // 遠東國際飯店
+    { seq: 4, stopUID: 'THB255379', lat: 25.03731, lon: 121.54354 }, // 福華飯店
+    { seq: 5, stopUID: 'THB301065', lat: 25.07809, lon: 121.232575 }, // 桃園機場第二航廈
+    { seq: 6, stopUID: 'THB295119', lat: 25.08279, lon: 121.2377 }, // 桃園機場第一航廈
+  ],
 } as const;
 
 export const COLLECT = {
@@ -11,6 +20,14 @@ export const COLLECT = {
   earliestTripStart: '04:30',
   cutoff: '07:30',
   intervalMs: 60_000,
+  // Polling pauses while the target is far from the stops ahead; travel time is bounded by straight-line distance at this speed.
+  maxSpeedKmh: 120,
+  // Stop when the target has neither a new A2 event nor got this much closer to the destination for this long.
+  stallMs: 20 * 60_000,
+  progressMeters: 300,
+  // An A1 position this close to the destination counts as arrived if no A2 event follows within the grace period.
+  nearDestinationMeters: 150,
+  nearDestinationGraceMs: 2 * 60_000,
   // Collected data is committed and pushed only when the working copy is on this branch.
   publishBranch: 'main',
 } as const;
