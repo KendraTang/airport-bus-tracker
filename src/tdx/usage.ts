@@ -12,8 +12,9 @@ export type UsageEntry = {
   bytes: number;
 };
 
-// TDX does not say whether call count and data volume are billed together or separately,
-// so both are added up to stay on the safe side. 1MB is taken as 1,000,000 bytes for the same reason.
+// TDX bills call count and data volume separately and adds them up (checked against the member centre).
+// TDX counts compressed transfer bytes, while entries record decompressed bytes, so this overestimates.
+// 1MB is taken as 1,000,000 bytes to stay on the safe side as well.
 const RATES: Record<Service, { perCall: number; perByte: number }> = {
   auth: { perCall: 0, perByte: 0 },
   basic: { perCall: 1 / 1500, perByte: 1 / 150_000_000 },
