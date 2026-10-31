@@ -152,6 +152,13 @@ summary {
   color: var(--muted);
 }
 
+.missing small,
+small.departure {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .legend {
   display: grid;
   gap: 6px;

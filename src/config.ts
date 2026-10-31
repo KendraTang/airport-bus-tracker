@@ -5,12 +5,12 @@ export const ROUTE = {
   destinationStopUID: 'THB295119', // 桃園機場第一航廈
   // Direction 0 stops with positions, from StopOfRoute (docs/api-tests/2026-10-29/stopOfRoute.json).
   stops: [
-    { seq: 1, stopUID: 'THB289789', lat: 25.040448, lon: 121.564772 }, // 市府轉運站
-    { seq: 2, stopUID: 'THB256678', lat: 25.03531, lon: 121.56335 }, // 台北君悅酒店
-    { seq: 3, stopUID: 'THB258650', lat: 25.0266546, lon: 121.5489483 }, // 遠東國際飯店
-    { seq: 4, stopUID: 'THB255379', lat: 25.03731, lon: 121.54354 }, // 福華飯店
-    { seq: 5, stopUID: 'THB301065', lat: 25.07809, lon: 121.232575 }, // 桃園機場第二航廈
-    { seq: 6, stopUID: 'THB295119', lat: 25.08279, lon: 121.2377 }, // 桃園機場第一航廈
+    { seq: 1, stopUID: 'THB289789', name: '市府轉運站', lat: 25.040448, lon: 121.564772 },
+    { seq: 2, stopUID: 'THB256678', name: '台北君悅酒店', lat: 25.03531, lon: 121.56335 },
+    { seq: 3, stopUID: 'THB258650', name: '遠東國際飯店', lat: 25.0266546, lon: 121.5489483 },
+    { seq: 4, stopUID: 'THB255379', name: '福華飯店', lat: 25.03731, lon: 121.54354 },
+    { seq: 5, stopUID: 'THB301065', name: '桃園機場第二航廈', lat: 25.07809, lon: 121.232575 },
+    { seq: 6, stopUID: 'THB295119', name: '桃園機場第一航廈', lat: 25.08279, lon: 121.2377 },
   ],
 } as const;
 
@@ -39,7 +39,7 @@ export const FULL_DAY = {
   tiers: [
     // A2 and A1 every minute: about 2,600 to 3,200 calls.
     { name: 'dense', intervalMs: 60_000, withA1: true, maxPolls: 1400, estimatedPoints: 2.3 },
-    // A2 only; departure events at city stops stayed visible for 3 minutes or more on 2026-10-30.
+    // A2 only; on 2026-10-31 this would have caught about 92% of departure events and 69% of arrival events.
     { name: 'sparse', intervalMs: 3 * 60_000, withA1: false, maxPolls: 500, estimatedPoints: 0.35 },
   ],
   // From docs/TIMETABLE.md: the last trip leaves the airport at 00:15 and ends at 市府轉運站.

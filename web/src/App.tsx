@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { ExternalLog, StopTime, Summary } from '../../src/export/types.ts';
+import type { ExternalLog, FirstTripLog, StopTime, Summary } from '../../src/export/types.ts';
 
 interface SiteData {
   summary: Summary;
+  firstTrips: FirstTripLog;
   appLog: ExternalLog | null;
 }
 
@@ -25,8 +26,12 @@ export function App() {
   const [load, setLoad] = useState<Load>({ state: 'loading' });
 
   useEffect(() => {
-    Promise.all([fetchJson<Summary>('summary.json'), fetchJson<ExternalLog | null>('app-driving-log.json')])
-      .then(([summary, appLog]) => setLoad({ state: 'ready', data: { summary, appLog } }))
+    Promise.all([
+      fetchJson<Summary>('summary.json'),
+      fetchJson<FirstTripLog>('first-trips.json'),
+      fetchJson<ExternalLog | null>('app-driving-log.json'),
+    ])
+      .then(([summary, firstTrips, appLog]) => setLoad({ state: 'ready', data: { summary, firstTrips, appLog } }))
       .catch((err: Error) => setLoad({ state: 'error', message: err.message }));
   }, []);
 
@@ -39,6 +44,7 @@ export function App() {
       {load.state === 'ready' && (
         <>
           <Status summary={load.data.summary} />
+          <FirstTrips log={load.data.firstTrips} />
           {load.data.appLog && <AppDrivingLog log={load.data.appLog} />}
         </>
       )}
@@ -68,6 +74,51 @@ function Status({ summary }: { summary: Summary }) {
         <dd>{summary.lastUpdatedAt ? taipeiTime.format(new Date(summary.lastUpdatedAt)) : '尚無資料'}</dd>
       </div>
     </dl>
+  );
+}
+
+function FirstTrips({ log }: { log: FirstTripLog }) {
+  return (
+    <section>
+      <h2>每日首班車紀錄</h2>
+      <p className="note">
+        本專案從 TDX 即時資料收集，時間為車輛回報的進站與離站時間（台灣時間，顯示到分鐘）。市府轉運站為發車時間，其餘各站上排為到站、下排為離站。
+      </p>
+      {log.days.length === 0 ? (
+        <p>尚無收集資料。</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="trips">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>車牌</th>
+                {log.stops.map((s) => (
+                  <th key={s.stopUID}>{s.name.replace('桃園機場', '')}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {log.days.map((day) => (
+                <tr key={day.date} className={day.weekday === '六' || day.weekday === '日' ? 'weekend' : undefined}>
+                  <td>
+                    {shortDate(day.date)}（{day.weekday}）
+                  </td>
+                  <td>{day.plate ?? '—'}</td>
+                  {day.stopTimes.map((st, i) => (
+                    <td key={log.stops[i]!.stopUID}>
+                      <StopTimeCell value={(st.arrival ?? st.departure)!} />
+                      {st.arrival && st.departure?.state === 'observed' && <small className="departure">離 {st.departure.time}</small>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Legend collected />
+    </section>
   );
 }
 
@@ -144,16 +195,32 @@ function StopTimeCell({ value }: { value: StopTime }) {
       return <span className="interval">{range(value.lower, value.upper)}</span>;
     case 'missing':
       return <span className="missing">—</span>;
+    case 'not_arrived_by_cutoff':
+      return (
+        <span className="missing" title={`收集於 ${value.cutoff} 結束前，未看到車輛到這一站`}>
+          未抵達
+          <small>{value.lower && `≥${value.lower}`}</small>
+        </span>
+      );
   }
 }
 
-function Legend() {
+// `collected`: the legend for this project's own records, which also show departures and runs that ended early.
+function Legend({ collected = false }: { collected?: boolean }) {
   return (
     <dl className="legend">
       <div>
         <dt>05:39</dt>
         <dd>有紀錄的時間</dd>
       </div>
+      {collected && (
+        <div>
+          <dt>
+            <small className="departure">離 05:40</small>
+          </dt>
+          <dd>離站時間，只列出有紀錄的</dd>
+        </div>
+      )}
       <div>
         <dt className="estimated">≈05:37</dt>
         <dd>沒有紀錄，依其他天的站間時間推算；下方為前後紀錄夾出的範圍</dd>
@@ -166,6 +233,12 @@ function Legend() {
         <dt className="missing">—</dt>
         <dd>沒有紀錄，也無法推算</dd>
       </div>
+      {collected && (
+        <div>
+          <dt className="missing">未抵達</dt>
+          <dd>收集結束前沒有看到車輛到這一站；下方為最後一筆紀錄的時間</dd>
+        </div>
+      )}
       <div>
         <dt className="weekend-swatch">週六日</dt>
         <dd>以底色標示；國定假日尚未納入判斷</dd>

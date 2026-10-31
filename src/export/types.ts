@@ -16,11 +16,27 @@ export interface Summary {
 //   estimated  not recorded; estimated from typical times between stops, within the bounds from neighbouring records
 //   interval   not recorded; only bounds are known (either may be open)
 //   missing    not recorded and nothing to bound it
+//   not_arrived_by_cutoff
+//              collection stopped (at `cutoff`) before the vehicle was seen here; `lower` is its last record before that
 export type StopTime =
   | { state: 'observed'; time: string }
   | { state: 'estimated'; time: string; lower: string | null; upper: string | null }
   | { state: 'interval'; lower: string | null; upper: string | null }
-  | { state: 'missing' };
+  | { state: 'missing' }
+  | { state: 'not_arrived_by_cutoff'; lower: string | null; cutoff: string };
+
+// The first airport-bound trip of each collected day, rebuilt from the A2 records. Described in docs/SITE_DATA.md.
+export interface FirstTripLog {
+  stops: { seq: number; stopUID: string; name: string }[];
+  days: {
+    date: string;
+    weekday: string;
+    // null when no first trip shows up in the day's records.
+    plate: string | null;
+    // One entry per stop, in stop order. arrival is null at the first stop, departure is null at the last.
+    stopTimes: { arrival: StopTime | null; departure: StopTime | null }[];
+  }[];
+}
 
 // Trip records copied from a third-party app, for days before the collector started.
 export interface ExternalLog {

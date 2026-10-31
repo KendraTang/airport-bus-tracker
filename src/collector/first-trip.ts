@@ -66,15 +66,24 @@ export function newTracker(serviceDate: string): TrackerState {
   return { serviceDate, target: null, seenSeq: 0, lastEventKey: null, position: null, progress: null, nearDestinationAt: null, done: null };
 }
 
-function isSameTrip(r: A2Record, target: TargetTrip): boolean {
+export function isSameTrip(r: A2Record, target: TargetTrip): boolean {
   if (r.PlateNumb !== target.plate || !r.TripStartTime) return false;
   return Math.abs(Date.parse(r.TripStartTime) - Date.parse(target.tripStartTime)) < SAME_TRIP_TOLERANCE_MS;
 }
 
-function isCandidate(r: A2Record, state: TrackerState, opts: TrackerOptions): boolean {
-  if (r.Direction !== opts.direction || !r.TripStartTime) return false;
+// The rule for which trip is the first trip of a service date, shared by the collector and the site export.
+export type FirstTripRule = Pick<TrackerOptions, 'direction' | 'earliestTripStart'>;
+
+export function isFirstTripCandidate(r: A2Record, serviceDate: string, rule: FirstTripRule): boolean {
+  if (r.Direction !== rule.direction || !r.TripStartTime) return false;
   const start = taipeiParts(new Date(r.TripStartTime));
-  return start.date === state.serviceDate && start.hhmm >= opts.earliestTripStart;
+  return start.date === serviceDate && start.hhmm >= rule.earliestTripStart;
+}
+
+// The earlier of the current pick and a candidate record.
+export function earlierTrip(target: TargetTrip | null, r: A2Record): TargetTrip {
+  if (target && Date.parse(r.TripStartTime!) >= Date.parse(target.tripStartTime)) return target;
+  return { plate: r.PlateNumb, tripStartTime: r.TripStartTime! };
 }
 
 function destination(opts: TrackerOptions): StopPoint {
@@ -89,10 +98,7 @@ export function updateTracker(state: TrackerState, poll: Poll, opts: TrackerOpti
 
   let target = state.target;
   for (const r of poll.a2) {
-    if (!isCandidate(r, state, opts)) continue;
-    if (!target || Date.parse(r.TripStartTime!) < Date.parse(target.tripStartTime)) {
-      target = { plate: r.PlateNumb, tripStartTime: r.TripStartTime! };
-    }
+    if (isFirstTripCandidate(r, state.serviceDate, opts)) target = earlierTrip(target, r);
   }
   if (!target) return state;
 
