@@ -1,0 +1,1 @@
+{"source":"local","serviceDate":"2026-11-22","startedAt":"2026-11-22T04:40:00.942+08:00","endedAt":"2026-11-22T05:38:01.133+08:00","mode":"daily","polls":33,"failures":2,"stopReason":"arrived","target":{"plate":"KKB-2179","tripStartTime":"2026-11-22T04:41:08+08:00"},"arrival":{"reason":"arrived","gpsTime":"2026-11-22T05:37:52+08:00","eventType":1}}
